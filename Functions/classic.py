@@ -79,8 +79,8 @@ class Classic(commands.Cog):
         character = survivor_query.union(killer_query)
         if character.count() > 1:
             return {'content': 'Your guess returned too many characters, please be more specific'}
-        elif character:
-            character = character.first()
+        character = character.first()
+        if character:
             self.compare_attribute(
                 character.gender, self.game_state.character.gender, 'gender'
             )
