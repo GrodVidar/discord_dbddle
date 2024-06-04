@@ -36,10 +36,16 @@ class Classic(commands.Cog):
                     await self.game_state.stop_game()
 
     @commands.command()
-    async def guess_classic(self, ctx):
+    async def guess_classic(self, ctx, game_type=GameState.RANDOM):
         print(ctx.message.content)
+        if game_type.lower().startswith('k'):
+            game_type = GameState.KILLER
+        elif game_type.lower().startswith('s'):
+            game_type = GameState.SURVIVOR
+        else:
+            game_type = GameState.RANDOM
         if not self.game_state.is_game_active:
-            self.game_state.start_game()
+            self.game_state.start_game(game_type=game_type)
             thread = await ctx.channel.create_thread(
                 name="Guess Classic", type=discord.ChannelType.public_thread
             )
@@ -75,33 +81,51 @@ class Classic(commands.Cog):
                                                                       .contains(func.lower(character_name)))
                 )
             )
-
-        character = survivor_query.union(killer_query)
+        if self.game_state.game_type == GameState.KILLER:
+            character = killer_query
+        elif self.game_state.game_type == GameState.SURVIVOR:
+            character = survivor_query
+        else:
+            character = survivor_query.union(killer_query)
         if character.count() > 1:
             return {'content': 'Your guess returned too many characters, please be more specific'}
         character = character.first()
         if character:
+            files = [
+                discord.File('images/classic/gender.png'),
+                discord.File('images/classic/origin.png'),
+                discord.File('images/classic/release date.png'),
+                discord.File('images/classic/license.png'),
+            ]
             self.compare_attribute(
                 character.gender, self.game_state.character.gender, 'gender'
             )
             self.compare_attribute(
                 character.origin, self.game_state.character.origin, 'origin'
             )
-            self.compare_dates(
-                character.release_date, self.game_state.character.release_date, 'release_date'
+            self.compare_comparable(
+                character.release_date, self.game_state.character.release_date, 'release date'
             )
             self.compare_attribute(
-                character.licence, self.game_state.character.licence, 'license'
+                character.license, self.game_state.character.license, 'license'
             )
+            if self.game_state.game_type == self.game_state.KILLER:
+                self.compare_comparable(
+                    character.terror_radius.speed, self.game_state.character.terror_radius.speed, 'speed'
+                )
+                self.compare_attribute(
+                    character.terror_radius.default_range,
+                    self.game_state.character.terror_radius.default_range,
+                    'terror radius range'
+                )
+                files += [
+                    discord.File('images/classic/speed.png'),
+                    discord.File('images/classic/terror radius range.png'),
+                ]
             return {
                 'content': character.name,
                 'character_name': character.name,
-                'files': [
-                    discord.File('images/classic/gender.png'),
-                    discord.File('images/classic/origin.png'),
-                    discord.File('images/classic/release_date.png'),
-                    discord.File('images/classic/license.png'),
-                ]
+                'files': files
             }
         else:
             return {'content': "No character with such name, no attempt counted"}
@@ -112,13 +136,13 @@ class Classic(commands.Cog):
         else:
             self.create_box(self.RED, character_attribute, filename)
 
-    def compare_dates(self, character_date, correct_character_date, filename):
-        if character_date < correct_character_date:
-            self.create_box(self.RED, str(character_date), filename, 'lt')
-        elif character_date > correct_character_date:
-            self.create_box(self.RED, str(character_date), filename, 'gt')
+    def compare_comparable(self, character_data, correct_character_data, filename):
+        if character_data < correct_character_data:
+            self.create_box(self.RED, str(character_data), filename, 'lt')
+        elif character_data > correct_character_data:
+            self.create_box(self.RED, str(character_data), filename, 'gt')
         else:
-            self.create_box(self.GREEN, str(character_date), filename)
+            self.create_box(self.GREEN, str(character_data), filename)
 
     @staticmethod
     def create_box(color, attribute, filename, arrow=None):
@@ -131,7 +155,7 @@ class Classic(commands.Cog):
             img = Image.new('RGB', (width, height), color=color)
 
         draw = ImageDraw.Draw(img)
-        draw.text((100, 100), attribute, fill=(0, 0, 0), align='center', anchor='mm', font_size=25)
+        draw.text((100, 100), f"{filename}\n{attribute}", fill=(0, 0, 0), align='center', anchor='mm', font_size=25)
         img.save('images/classic/' + filename + '.png')
 
 

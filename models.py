@@ -2,8 +2,7 @@ import random
 import urllib.request
 
 from PIL import Image
-from sqlalchemy import (Boolean, Column, ForeignKey, Integer, String, Table,
-                        func, Date)
+from sqlalchemy import Column, ForeignKey, Integer, String, func, Date, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, joinedload, reconstructor, relationship
 import random
@@ -19,16 +18,15 @@ class Character(Base):
     gender = Column(String)
     origin = Column(String)
     release_date = Column(Date)
-    licence = Column(String)
+    license = Column(String)
 
-    def __init__(self, name, gender, origin, release_date, licence, **kwargs):
+    def __init__(self, name, gender, origin, release_date, _license, **kwargs):
         super().__init__(**kwargs)
         self.name = name
         self.gender = gender
         self.origin = origin
         self.release_date = release_date
-        self.licence = licence
-
+        self.license = _license
 
     @staticmethod
     def get_random_character(session, random_type=True):
@@ -123,11 +121,13 @@ class TerrorRadius(Base):
     sound = Column(String)
     killer_id = Column(Integer, ForeignKey('killer.pk'), unique=True)
     killer = relationship('Killer', back_populates='terror_radius', uselist=False)
+    speed = Column(Float)
 
-    def __init__(self, sound, default_range, **kwargs):
+    def __init__(self, sound, default_range, speed, **kwargs):
         super().__init__(**kwargs)
         self.sound = sound
         self.default_range = default_range
+        self.speed = speed
 
 
 class GameState:
