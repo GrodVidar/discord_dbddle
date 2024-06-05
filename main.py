@@ -1,29 +1,29 @@
 import os
 
 import discord
-from sqlalchemy import create_engine
 from discord.ext import commands
 from dotenv import load_dotenv
-from models import Base
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from repository import populate_database
 
+from models import Base
+from repository import populate_database
 
 load_dotenv()
 
-TOKEN = os.getenv('BOT_TOKEN')
+TOKEN = os.getenv("BOT_TOKEN")
 
-db_file = 'dbddle.db'
-all_characters_file = 'data.json'
-add_file = 'add_character.json'
+db_file = "dbddle.db"
+all_characters_file = "data.json"
+add_file = "add_character.json"
 if not os.path.exists(db_file):
-    engine = create_engine(f'sqlite:///{db_file}')
+    engine = create_engine(f"sqlite:///{db_file}")
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     with Session() as session:
         populate_database(session, all_characters_file)
 else:
-    engine = create_engine(f'sqlite:///{db_file}')
+    engine = create_engine(f"sqlite:///{db_file}")
     Session = sessionmaker(bind=engine)
 
 
@@ -47,8 +47,7 @@ cogs = ["Functions.classic"]
 @client.event
 async def on_ready():
     await client.change_presence(
-        status=discord.Status.online,
-        activity=discord.Game("DBDLE")
+        status=discord.Status.online, activity=discord.Game("DBDLE")
     )
     for cog in cogs:
         try:
@@ -57,5 +56,6 @@ async def on_ready():
         except Exception as e:
             exc = "{}: {}".format(type(e).__name__, e)
             print(f"failed to load cog {cog}\n{exc}")
+
 
 client.run(TOKEN)

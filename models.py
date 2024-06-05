@@ -1,12 +1,11 @@
 import random
+import re
 import urllib.request
 
 from PIL import Image
-from sqlalchemy import Column, ForeignKey, Integer, String, func, Date, Float
+from sqlalchemy import Column, Date, Float, ForeignKey, Integer, String, func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, joinedload, reconstructor, relationship
-import random
-import re
 
 Base = declarative_base()
 
@@ -45,7 +44,7 @@ class Character(Base):
             .options(
                 joinedload(Killer.aliases),
                 joinedload(Killer.perks),
-                joinedload(Killer.terror_radius)
+                joinedload(Killer.terror_radius),
             )
             .order_by(func.random())
             .first()
@@ -55,19 +54,16 @@ class Character(Base):
     def get_random_survivor(session):
         return (
             session.query(Survivor)
-            .options(
-                joinedload(Survivor.aliases),
-                joinedload(Survivor.perks)
-            )
+            .options(joinedload(Survivor.aliases), joinedload(Survivor.perks))
             .order_by(func.random())
             .first()
         )
 
 
 class Survivor(Character):
-    __tablename__ = 'survivor'
-    aliases = relationship("Alias", secondary=None, back_populates='survivor')
-    perks = relationship('Perk', secondary=None, back_populates='survivor')
+    __tablename__ = "survivor"
+    aliases = relationship("Alias", secondary=None, back_populates="survivor")
+    perks = relationship("Perk", secondary=None, back_populates="survivor")
 
     def __init__(self, aliases, perks, **kwargs):
         super().__init__(**kwargs)
@@ -76,10 +72,12 @@ class Survivor(Character):
 
 
 class Killer(Character):
-    __tablename__ = 'killer'
-    aliases = relationship("Alias", secondary=None, back_populates='killer')
-    perks = relationship('Perk', secondary=None, back_populates='killer')
-    terror_radius = relationship('TerrorRadius', secondary=None, back_populates='killer', uselist=False)
+    __tablename__ = "killer"
+    aliases = relationship("Alias", secondary=None, back_populates="killer")
+    perks = relationship("Perk", secondary=None, back_populates="killer")
+    terror_radius = relationship(
+        "TerrorRadius", secondary=None, back_populates="killer", uselist=False
+    )
 
     def __init__(self, aliases, perks, terror_radius, **kwargs):
         super().__init__(**kwargs)
@@ -89,24 +87,24 @@ class Killer(Character):
 
 
 class Alias(Base):
-    __tablename__ = 'alias'
+    __tablename__ = "alias"
     pk = Column(Integer, primary_key=True)
     title = Column(String)
-    survivor_id = Column(Integer, ForeignKey('survivor.pk'))
-    survivor = relationship('Survivor', back_populates='aliases')
-    killer_id = Column(Integer, ForeignKey('killer.pk'))
-    killer = relationship('Killer', back_populates='aliases')
+    survivor_id = Column(Integer, ForeignKey("survivor.pk"))
+    survivor = relationship("Survivor", back_populates="aliases")
+    killer_id = Column(Integer, ForeignKey("killer.pk"))
+    killer = relationship("Killer", back_populates="aliases")
 
 
 class Perk(Base):
-    __tablename__ = 'perk'
+    __tablename__ = "perk"
     pk = Column(Integer, primary_key=True)
     name = Column(String)
     image_url = Column(String)
-    survivor_id = Column(Integer, ForeignKey('survivor.pk'))
-    survivor = relationship('Survivor', back_populates='perks')
-    killer_id = Column(Integer, ForeignKey('killer.pk'))
-    killer = relationship('Killer', back_populates='perks')
+    survivor_id = Column(Integer, ForeignKey("survivor.pk"))
+    survivor = relationship("Survivor", back_populates="perks")
+    killer_id = Column(Integer, ForeignKey("killer.pk"))
+    killer = relationship("Killer", back_populates="perks")
 
     def __init__(self, name, image_url, **kwargs):
         super().__init__(**kwargs)
@@ -115,12 +113,12 @@ class Perk(Base):
 
 
 class TerrorRadius(Base):
-    __tablename__ = 'terror_radius'
+    __tablename__ = "terror_radius"
     pk = Column(Integer, primary_key=True)
     default_range = Column(Integer)
     sound = Column(String)
-    killer_id = Column(Integer, ForeignKey('killer.pk'), unique=True)
-    killer = relationship('Killer', back_populates='terror_radius', uselist=False)
+    killer_id = Column(Integer, ForeignKey("killer.pk"), unique=True)
+    killer = relationship("Killer", back_populates="terror_radius", uselist=False)
     speed = Column(Float)
 
     def __init__(self, sound, default_range, speed, **kwargs):
@@ -131,9 +129,9 @@ class TerrorRadius(Base):
 
 
 class GameState:
-    KILLER = 'killer'
-    SURVIVOR = 'survivor'
-    RANDOM = 'random'
+    KILLER = "killer"
+    SURVIVOR = "survivor"
+    RANDOM = "random"
 
     def __init__(self, bot):
         self.bot = bot
@@ -155,7 +153,9 @@ class GameState:
         self.attempts = 0
         self.game_type = game_type
         if game_type == GameState.RANDOM:
-            self.is_survivor, self.character = Character.get_random_character(self.bot.session)
+            self.is_survivor, self.character = Character.get_random_character(
+                self.bot.session
+            )
         elif game_type == GameState.SURVIVOR:
             self.is_survivor = True
             self.character = Survivor.get_random_survivor(self.bot.session)
@@ -167,5 +167,3 @@ class GameState:
     def guess(self, character_name: str):
         self.attempts += 1
         return character_name == self.character.name
-
-

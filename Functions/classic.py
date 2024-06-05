@@ -1,9 +1,10 @@
 import discord
 from discord.ext import commands
-from models import GameState, Killer, Survivor, Character, Alias
-from sqlalchemy.orm import joinedload
 from PIL import Image, ImageDraw
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
+
+from models import Alias, GameState, Killer, Survivor
 
 
 class Classic(commands.Cog):
@@ -20,12 +21,12 @@ class Classic(commands.Cog):
         if (
             self.game_state.is_game_active
             and not message.author.bot
-            and not message.content.startswith('_')
+            and not message.content.startswith("_")
             and message.channel == self.game_state.thread
         ):
             print(message.content)
             comparison = self.compare_characters(message.content)
-            character_name = comparison.pop('character_name', None)
+            character_name = comparison.pop("character_name", None)
             await message.channel.send(**comparison)
             if character_name:
                 if self.game_state.guess(character_name):
@@ -38,9 +39,9 @@ class Classic(commands.Cog):
     @commands.command()
     async def guess_classic(self, ctx, game_type=GameState.RANDOM):
         print(ctx.message.content)
-        if game_type.lower().startswith('k'):
+        if game_type.lower().startswith("k"):
             game_type = GameState.KILLER
-        elif game_type.lower().startswith('s'):
+        elif game_type.lower().startswith("s"):
             game_type = GameState.SURVIVOR
         else:
             game_type = GameState.RANDOM
@@ -56,19 +57,29 @@ class Classic(commands.Cog):
     def compare_characters(self, character_name):
         survivor_query = self.bot.session.query(None)
         killer_query = self.bot.session.query(None)
-        if self.game_state.game_type == GameState.SURVIVOR or self.game_state.game_type == GameState.RANDOM:
+        if (
+            self.game_state.game_type == GameState.SURVIVOR
+            or self.game_state.game_type == GameState.RANDOM
+        ):
             survivor_query = (
                 self.bot.session.query(Survivor)
                 .options(
                     joinedload(Survivor.perks),
                     joinedload(Survivor.aliases),
                 )
-                .filter(func.lower(Survivor.name).contains(func.lower(character_name))).union(
-                    self.bot.session.query(Survivor).join(Alias).filter(func.lower(Alias.title)
-                                                                        .contains(func.lower(character_name)))
+                .filter(func.lower(Survivor.name).contains(func.lower(character_name)))
+                .union(
+                    self.bot.session.query(Survivor)
+                    .join(Alias)
+                    .filter(
+                        func.lower(Alias.title).contains(func.lower(character_name))
+                    )
                 )
             )
-        if self.game_state.game_type == GameState.KILLER or self.game_state.game_type == GameState.RANDOM:
+        if (
+            self.game_state.game_type == GameState.KILLER
+            or self.game_state.game_type == GameState.RANDOM
+        ):
             killer_query = (
                 self.bot.session.query(Killer)
                 .options(
@@ -76,9 +87,13 @@ class Classic(commands.Cog):
                     joinedload(Killer.aliases),
                     joinedload(Killer.terror_radius),
                 )
-                .filter(func.lower(Killer.name).contains(func.lower(character_name))).union(
-                    self.bot.session.query(Killer).join(Alias).filter(func.lower(Alias.title)
-                                                                      .contains(func.lower(character_name)))
+                .filter(func.lower(Killer.name).contains(func.lower(character_name)))
+                .union(
+                    self.bot.session.query(Killer)
+                    .join(Alias)
+                    .filter(
+                        func.lower(Alias.title).contains(func.lower(character_name))
+                    )
                 )
             )
         if self.game_state.game_type == GameState.KILLER:
@@ -88,49 +103,57 @@ class Classic(commands.Cog):
         else:
             character = survivor_query.union(killer_query)
         if character.count() > 1:
-            return {'content': 'Your guess returned too many characters, please be more specific'}
+            return {
+                "content": "Your guess returned too many characters, please be more specific"
+            }
         character = character.first()
         if character:
-            files = [
-                discord.File('images/classic/gender.png'),
-                discord.File('images/classic/origin.png'),
-                discord.File('images/classic/release date.png'),
-                discord.File('images/classic/license.png'),
-            ]
             self.compare_attribute(
-                character.gender, self.game_state.character.gender, 'gender'
+                character.gender, self.game_state.character.gender, "gender"
             )
             self.compare_attribute(
-                character.origin, self.game_state.character.origin, 'origin'
+                character.origin, self.game_state.character.origin, "origin"
             )
             self.compare_comparable(
-                character.release_date, self.game_state.character.release_date, 'release date'
+                character.release_date,
+                self.game_state.character.release_date,
+                "release date",
             )
             self.compare_attribute(
-                character.license, self.game_state.character.license, 'license'
+                character.license, self.game_state.character.license, "license"
             )
+            files = [
+                discord.File("images/classic/gender.png"),
+                discord.File("images/classic/origin.png"),
+                discord.File("images/classic/release date.png"),
+                discord.File("images/classic/license.png"),
+            ]
             if self.game_state.game_type == self.game_state.KILLER:
                 self.compare_comparable(
-                    character.terror_radius.speed, self.game_state.character.terror_radius.speed, 'speed'
+                    character.terror_radius.speed,
+                    self.game_state.character.terror_radius.speed,
+                    "speed",
                 )
                 self.compare_attribute(
                     character.terror_radius.default_range,
                     self.game_state.character.terror_radius.default_range,
-                    'terror radius range'
+                    "terror radius range",
                 )
                 files += [
-                    discord.File('images/classic/speed.png'),
-                    discord.File('images/classic/terror radius range.png'),
+                    discord.File("images/classic/speed.png"),
+                    discord.File("images/classic/terror radius range.png"),
                 ]
             return {
-                'content': character.name,
-                'character_name': character.name,
-                'files': files
+                "content": character.name,
+                "character_name": character.name,
+                "files": files,
             }
         else:
-            return {'content': "No character with such name, no attempt counted"}
+            return {"content": "No character with such name, no attempt counted"}
 
-    def compare_attribute(self, character_attribute, correct_character_attribute, filename):
+    def compare_attribute(
+        self, character_attribute, correct_character_attribute, filename
+    ):
         if character_attribute == correct_character_attribute:
             self.create_box(self.GREEN, character_attribute, filename)
         else:
@@ -138,25 +161,32 @@ class Classic(commands.Cog):
 
     def compare_comparable(self, character_data, correct_character_data, filename):
         if character_data < correct_character_data:
-            self.create_box(self.RED, str(character_data), filename, 'lt')
+            self.create_box(self.RED, str(character_data), filename, "lt")
         elif character_data > correct_character_data:
-            self.create_box(self.RED, str(character_data), filename, 'gt')
+            self.create_box(self.RED, str(character_data), filename, "gt")
         else:
             self.create_box(self.GREEN, str(character_data), filename)
 
     @staticmethod
     def create_box(color, attribute, filename, arrow=None):
         width, height = (198, 219)
-        if arrow == 'gt':
-            img = Image.open('images/classic/templates/arrow_down.png')
-        elif arrow == 'lt':
-            img = Image.open('images/classic/templates/arrow_up.png')
+        if arrow == "gt":
+            img = Image.open("images/classic/templates/arrow_down.png")
+        elif arrow == "lt":
+            img = Image.open("images/classic/templates/arrow_up.png")
         else:
-            img = Image.new('RGB', (width, height), color=color)
+            img = Image.new("RGB", (width, height), color=color)
 
         draw = ImageDraw.Draw(img)
-        draw.text((100, 100), f"{filename}\n{attribute}", fill=(0, 0, 0), align='center', anchor='mm', font_size=25)
-        img.save('images/classic/' + filename + '.png')
+        draw.text(
+            (100, 100),
+            f"{filename}\n{attribute}",
+            fill=(0, 0, 0),
+            align="center",
+            anchor="mm",
+            font_size=25,
+        )
+        img.save("images/classic/" + filename + ".png")
 
 
 async def setup(bot):
