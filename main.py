@@ -41,7 +41,7 @@ class Bot(commands.Bot):
 
 client = Bot()
 
-cogs = ["Functions.classic"]
+cogs = ["Functions.classic", "Functions.perks"]
 
 
 @client.event

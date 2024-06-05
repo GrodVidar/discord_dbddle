@@ -21,9 +21,13 @@ class Classic(commands.Cog):
         if (
             self.game_state.is_game_active
             and not message.author.bot
-            and not message.content.startswith("_")
             and message.channel == self.game_state.thread
         ):
+            if message.content == 'give_up':
+                await message.channel.send(f"You guessed {self.game_state.attempts} times.\n"
+                                           f"The correct answer was: {self.game_state.character.name}")
+                await self.game_state.stop_game()
+                return
             print(message.content)
             comparison = self.compare_characters(message.content)
             character_name = comparison.pop("character_name", None)
@@ -48,65 +52,20 @@ class Classic(commands.Cog):
         if not self.game_state.is_game_active:
             self.game_state.start_game(game_type=game_type)
             thread = await ctx.channel.create_thread(
-                name="Guess Classic", type=discord.ChannelType.public_thread
+                name="Guess Classic", type=discord.ChannelType.public_thread,
             )
+            await thread.send("Type `give_up` in this thread to give up")
             self.game_state.thread = thread
         else:
             await ctx.send("A game is already ongoing")
 
     def compare_characters(self, character_name):
-        survivor_query = self.bot.session.query(None)
-        killer_query = self.bot.session.query(None)
-        if (
-            self.game_state.game_type == GameState.SURVIVOR
-            or self.game_state.game_type == GameState.RANDOM
-        ):
-            survivor_query = (
-                self.bot.session.query(Survivor)
-                .options(
-                    joinedload(Survivor.perks),
-                    joinedload(Survivor.aliases),
-                )
-                .filter(func.lower(Survivor.name).contains(func.lower(character_name)))
-                .union(
-                    self.bot.session.query(Survivor)
-                    .join(Alias)
-                    .filter(
-                        func.lower(Alias.title).contains(func.lower(character_name))
-                    )
-                )
-            )
-        if (
-            self.game_state.game_type == GameState.KILLER
-            or self.game_state.game_type == GameState.RANDOM
-        ):
-            killer_query = (
-                self.bot.session.query(Killer)
-                .options(
-                    joinedload(Killer.perks),
-                    joinedload(Killer.aliases),
-                    joinedload(Killer.terror_radius),
-                )
-                .filter(func.lower(Killer.name).contains(func.lower(character_name)))
-                .union(
-                    self.bot.session.query(Killer)
-                    .join(Alias)
-                    .filter(
-                        func.lower(Alias.title).contains(func.lower(character_name))
-                    )
-                )
-            )
-        if self.game_state.game_type == GameState.KILLER:
-            character = killer_query
-        elif self.game_state.game_type == GameState.SURVIVOR:
-            character = survivor_query
-        else:
-            character = survivor_query.union(killer_query)
-        if character.count() > 1:
+        characters = self.game_state.find_character(character_name)
+        if characters.count() > 1:
             return {
                 "content": "Your guess returned too many characters, please be more specific"
             }
-        character = character.first()
+        character = characters.first()
         if character:
             self.compare_attribute(
                 character.gender, self.game_state.character.gender, "gender"

@@ -101,6 +101,7 @@ class Perk(Base):
     pk = Column(Integer, primary_key=True)
     name = Column(String)
     image_url = Column(String)
+    popularity = Column(Float)
     survivor_id = Column(Integer, ForeignKey("survivor.pk"))
     survivor = relationship("Survivor", back_populates="perks")
     killer_id = Column(Integer, ForeignKey("killer.pk"))
@@ -167,3 +168,53 @@ class GameState:
     def guess(self, character_name: str):
         self.attempts += 1
         return character_name == self.character.name
+
+    def find_character(self, character_name):
+        survivor_query = None
+        killer_query = None
+        if (
+                self.game_type == GameState.SURVIVOR
+                or self.game_type == GameState.RANDOM
+        ):
+            survivor_query = (
+                self.bot.session.query(Survivor)
+                .options(
+                    joinedload(Survivor.perks),
+                    joinedload(Survivor.aliases),
+                )
+                .filter(func.lower(Survivor.name).contains(func.lower(character_name)))
+                .union(
+                    self.bot.session.query(Survivor)
+                    .join(Alias)
+                    .filter(
+                        func.lower(Alias.title).contains(func.lower(character_name))
+                    )
+                )
+            )
+        if (
+                self.game_type == GameState.KILLER
+                or self.game_type == GameState.RANDOM
+        ):
+            killer_query = (
+                self.bot.session.query(Killer)
+                .options(
+                    joinedload(Killer.perks),
+                    joinedload(Killer.aliases),
+                    joinedload(Killer.terror_radius),
+                )
+                .filter(func.lower(Killer.name).contains(func.lower(character_name)))
+                .union(
+                    self.bot.session.query(Killer)
+                    .join(Alias)
+                    .filter(
+                        func.lower(Alias.title).contains(func.lower(character_name))
+                    )
+                )
+            )
+        if self.game_type == GameState.KILLER:
+            characters = killer_query
+        elif self.game_type == GameState.SURVIVOR:
+            characters = survivor_query
+        else:
+            characters = survivor_query.union(killer_query)
+        return characters
