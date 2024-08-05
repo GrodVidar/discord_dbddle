@@ -172,10 +172,7 @@ class GameState:
     def find_character(self, character_name):
         survivor_query = None
         killer_query = None
-        if (
-                self.game_type == GameState.SURVIVOR
-                or self.game_type == GameState.RANDOM
-        ):
+        if self.game_type == GameState.SURVIVOR or self.game_type == GameState.RANDOM:
             survivor_query = (
                 self.bot.session.query(Survivor)
                 .options(
@@ -191,10 +188,7 @@ class GameState:
                     )
                 )
             )
-        if (
-                self.game_type == GameState.KILLER
-                or self.game_type == GameState.RANDOM
-        ):
+        if self.game_type == GameState.KILLER or self.game_type == GameState.RANDOM:
             killer_query = (
                 self.bot.session.query(Killer)
                 .options(

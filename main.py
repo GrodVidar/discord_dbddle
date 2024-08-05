@@ -1,3 +1,4 @@
+import argparse
 import os
 
 import discord
@@ -5,16 +6,13 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import argparse
 
 from models import Base
 from repository import populate_database
 
-parser = argparse.ArgumentParser('Dbdle')
+parser = argparse.ArgumentParser("Dbdle")
 parser.add_argument(
-    '--update',
-    action='store_true',
-    help='pass 1 or True to update the database with data from data.json'
+    "--update", action="store_true", help="Flag to trigger update db from data.json"
 )
 args = parser.parse_args()
 

@@ -23,9 +23,11 @@ class Classic(commands.Cog):
             and not message.author.bot
             and message.channel == self.game_state.thread
         ):
-            if message.content == 'give_up':
-                await message.channel.send(f"You guessed {self.game_state.attempts} times.\n"
-                                           f"The correct answer was: {self.game_state.character.name}")
+            if message.content == "give_up":
+                await message.channel.send(
+                    f"You guessed {self.game_state.attempts} times.\n"
+                    f"The correct answer was: {self.game_state.character.name}"
+                )
                 await self.game_state.stop_game()
                 return
             print(message.content)
@@ -52,7 +54,8 @@ class Classic(commands.Cog):
         if not self.game_state.is_game_active:
             self.game_state.start_game(game_type=game_type)
             thread = await ctx.channel.create_thread(
-                name="Guess Classic", type=discord.ChannelType.public_thread,
+                name="Guess Classic",
+                type=discord.ChannelType.public_thread,
             )
             await thread.send("Type `give_up` in this thread to give up")
             self.game_state.thread = thread
