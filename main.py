@@ -5,9 +5,19 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+import argparse
 
 from models import Base
 from repository import populate_database
+
+parser = argparse.ArgumentParser('Dbdle')
+parser.add_argument(
+    '--update',
+    action='store_true',
+    help='pass 1 or True to update the database with data from data.json'
+)
+args = parser.parse_args()
+
 
 load_dotenv()
 
@@ -15,7 +25,6 @@ TOKEN = os.getenv("BOT_TOKEN")
 
 db_file = "dbddle.db"
 all_characters_file = "data.json"
-add_file = "add_character.json"
 if not os.path.exists(db_file):
     engine = create_engine(f"sqlite:///{db_file}")
     Base.metadata.create_all(engine)
@@ -25,6 +34,9 @@ if not os.path.exists(db_file):
 else:
     engine = create_engine(f"sqlite:///{db_file}")
     Session = sessionmaker(bind=engine)
+    if args.update:
+        with Session() as session:
+            populate_database(session, all_characters_file)
 
 
 class Bot(commands.Bot):
